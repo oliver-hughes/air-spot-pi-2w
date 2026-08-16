@@ -262,7 +262,8 @@ shelves. Tunables:
 
 - `reference_level` — the volume (dB) at which the curve is flat. This is "how loud is my
   normal listening level", and it's the parameter that actually matters. Needs setting by ear.
-- `low_boost` / `high_boost` — max lift in dB at full attenuation (default 10 dB each).
+- `low_boost` / `high_boost` — max lift in dB at full attenuation (defaults here: 6 dB low,
+  3 dB high).
 - `attenuate_mid` — whether to cut mids instead of boosting the extremes.
 
 **b) Static PEQ** — a list of `Biquad` filters (peaking / lowshelf / highshelf) for room and

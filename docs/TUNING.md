@@ -20,7 +20,8 @@ get the flat curve at a quiet level, which is precisely backwards.
 
 So:
 
-1. Set the phone to about two-thirds volume.
+1. Set the phone to about seven-eighths volume — where the default
+   `reference_level: -8.0` puts the flat point.
 2. Set the ZD3 and the amp so that this is comfortably loud — your normal
    listening level.
 3. **Mark both knobs.** Tape, pen, whatever. Don't move them again.
@@ -34,7 +35,8 @@ The one parameter that actually matters. It's the volume at which the loudness
 curve does nothing; below it you get progressive lift.
 
 The scale: `vol-bridge.py` maps the AirPlay slider onto 0 dB (full) to −60 dB
-(minimum). So `reference_level: -20.0` is roughly two-thirds up the slider.
+(minimum). So `reference_level: -8.0` — the default — is roughly seven-eighths
+up the slider.
 
 To calibrate:
 
@@ -68,7 +70,7 @@ Main volume independently of any filter. Measured, not assumed.
 
 ### What you should hear
 
-Measured on this exact config (`low_boost: 10`, `high_boost: 4`,
+Measured on the *previous* defaults (`low_boost: 10`, `high_boost: 4`,
 `reference_level: -20`), bypassed vs active:
 
 | Phone volume | 50 Hz | 1 kHz | 12 kHz |
@@ -76,6 +78,11 @@ Measured on this exact config (`low_boost: 10`, `high_boost: 4`,
 | −20 dB (at reference) | +0.00 dB | +0.00 dB | +0.00 dB |
 | −35 dB | +5.86 dB | +0.02 dB | +2.99 dB |
 | −50 dB | +7.74 dB | +0.03 dB | +3.99 dB |
+
+The current defaults (`low_boost: 6`, `high_boost: 3`, `reference_level: -8`)
+have the same curve shape at smaller amplitude, with the flat point moved
+further up the slider. Not re-measured — the conclusions below are properties
+of the filter, not of those particular numbers.
 
 Three things follow:
 
