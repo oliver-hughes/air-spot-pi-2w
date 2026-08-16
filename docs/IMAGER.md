@@ -20,7 +20,7 @@ Two things people get wrong here:
 |---|---|
 | Hostname | `big` |
 | Enable SSH | yes, **public-key authentication** |
-| Username | `pi` (or your preference — set `PI_USER` in the Makefile if you change it) |
+| Username | `big` (if you use something else, set `PI_USER` in the Makefile to match) |
 | Wi-Fi SSID / password | **your network — yes, even though you're using ethernet** |
 | Locale / timezone | yours |
 
@@ -38,9 +38,9 @@ rather than cutting the branch it's sitting on.
 ## First boot
 
 ```bash
-ssh pi@big.local
+ssh big@big.local
 
-git clone https://github.com/oliverhughes/air-spot-pi-2w.git
+git clone https://github.com/oliver-hughes/air-spot-pi-2w.git
 cd air-spot-pi-2w
 sudo ./bootstrap.sh
 ```

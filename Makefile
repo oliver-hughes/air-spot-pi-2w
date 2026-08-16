@@ -7,7 +7,7 @@
 #   make status         one-screen health check
 
 PI      ?= big.local
-PI_USER ?= pi
+PI_USER ?= big
 SSH     := ssh $(PI_USER)@$(PI)
 
 REPO_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
