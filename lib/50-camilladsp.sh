@@ -26,12 +26,23 @@ fi
 # Dedicated unprivileged user. 'audio' for ALSA access; the GUI writes configs
 # as the same user so ownership stays coherent.
 if ! id -u camilladsp >/dev/null 2>&1; then
-  run useradd --system --no-create-home --shell /usr/sbin/nologin --groups audio camilladsp
+  run useradd --system --home-dir /var/lib/camilladsp --no-create-home \
+      --shell /usr/sbin/nologin --groups audio camilladsp
   ok "created 'camilladsp' service user"
 else
   skip "'camilladsp' user exists"
 fi
 
+# Give the account a home that actually exists. Everything we configure uses
+# absolute paths, but upstream defaults are written as ~/camilladsp/... and any
+# code path that expands ~ against a missing directory dies with a
+# FileNotFoundError that names the home dir rather than the real problem.
+run usermod --home /var/lib/camilladsp camilladsp
+
 run install -d -m 0755 -o camilladsp -g camilladsp /etc/camilladsp
 run install -d -m 0755 -o camilladsp -g camilladsp /etc/camilladsp/configs
 run install -d -m 0755 -o camilladsp -g camilladsp /etc/camilladsp/coeffs
+
+# systemd's StateDirectory= creates this when camilladsp.service starts, but the
+# GUI wants to read (and write) the statefile here and may start first.
+run install -d -m 0755 -o camilladsp -g camilladsp /var/lib/camilladsp

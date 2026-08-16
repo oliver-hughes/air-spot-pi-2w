@@ -132,12 +132,21 @@ fi
 
 # --- CamillaGUI -------------------------------------------------------------
 if [[ "$SKIP_GUI" != "1" ]]; then
-  if render "$REPO_DIR/config/camillagui.yml.tmpl" /opt/camillagui/camillagui.yml 0644 \
+  # /etc, not inside /opt/camillagui: the bundle directory is replaced wholesale
+  # on a version bump. Passed to the backend with -c in the service unit.
+  if render "$REPO_DIR/config/camillagui.yml.tmpl" /etc/camillagui.yml 0644 \
        "GUI_BIND=$GUI_BIND" "GUI_PORT=$GUI_PORT"; then
-    ok "wrote camillagui.yml"
+    ok "wrote /etc/camillagui.yml"
     restart_gui=1
   else
     skip "camillagui.yml unchanged"
+  fi
+
+  # An earlier revision wrote this file here, where the backend never reads it.
+  # Remove it so nobody edits it and wonders why nothing changes.
+  if [[ -f /opt/camillagui/camillagui.yml ]]; then
+    run rm -f /opt/camillagui/camillagui.yml
+    info "removed stale /opt/camillagui/camillagui.yml (never read; superseded by /etc/camillagui.yml)"
   fi
 
   gui_bin=""
