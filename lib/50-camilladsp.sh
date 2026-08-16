@@ -33,11 +33,26 @@ else
   skip "'camilladsp' user exists"
 fi
 
-# Give the account a home that actually exists. Everything we configure uses
-# absolute paths, but upstream defaults are written as ~/camilladsp/... and any
-# code path that expands ~ against a missing directory dies with a
-# FileNotFoundError that names the home dir rather than the real problem.
-run usermod --home /var/lib/camilladsp camilladsp
+# Give the account a home that actually exists. Belt-and-braces only: every
+# path we configure is absolute, but upstream defaults are written as
+# ~/camilladsp/... and any code path expanding ~ against a missing directory
+# dies with a FileNotFoundError naming the home dir rather than the real fault.
+#
+# usermod refuses while the user owns a running process, which is the normal
+# case on a re-run. Not worth stopping the audio daemon over, so this is
+# best-effort: skip when already correct, tolerate failure otherwise.
+current_home="$(getent passwd camilladsp | cut -d: -f6)"
+if [[ "$current_home" == "/var/lib/camilladsp" ]]; then
+  skip "'camilladsp' home already /var/lib/camilladsp"
+elif [[ "$DRY_RUN" == "1" ]]; then
+  skip "DRY: would set camilladsp home to /var/lib/camilladsp"
+elif usermod --home /var/lib/camilladsp camilladsp 2>/dev/null; then
+  ok "set 'camilladsp' home to /var/lib/camilladsp"
+else
+  warn "couldn't change camilladsp's home (services are using the account)."
+  warn "Harmless -- all configured paths are absolute. To apply it anyway:"
+  warn "  sudo systemctl stop camilladsp camillagui && sudo ./bootstrap.sh --reconfigure"
+fi
 
 run install -d -m 0755 -o camilladsp -g camilladsp /etc/camilladsp
 run install -d -m 0755 -o camilladsp -g camilladsp /etc/camilladsp/configs

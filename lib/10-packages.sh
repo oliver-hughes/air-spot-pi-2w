@@ -12,7 +12,10 @@ PACKAGES=(
   avahi-daemon libavahi-client-dev
   libssl-dev libsoxr-dev libplist-dev libplist-utils libsodium-dev
   libavutil-dev libavcodec-dev libavformat-dev
-  uuid-dev libgcrypt-dev xxd
+  # libgcrypt20-dev, not libgcrypt-dev as shairport-sync's BUILD.md lists it:
+  # the latter is a virtual package, so dpkg-query never reports it installed
+  # and we'd re-run apt on every single invocation.
+  uuid-dev libgcrypt20-dev xxd
   systemd-dev
   alsa-utils curl ca-certificates
   # python3-yaml backs tools/config-split.py, which pulls GUI tuning back into
@@ -37,20 +40,30 @@ else
 fi
 
 # --- Swap -------------------------------------------------------------------
-# 512 MB of RAM against the ffmpeg headers shairport-sync pulls in is not enough.
-# Without swap, the compile gets OOM-killed partway through and leaves a mess.
-swap_kb="$(awk '/^SwapTotal:/ {print $2}' /proc/meminfo)"
-swap_mb=$(( swap_kb / 1024 ))
-if (( swap_mb >= 512 )); then
-  skip "swap is ${swap_mb} MB, enough"
+# 512 MB of RAM against the ffmpeg headers shairport-sync pulls in is tight.
+# Without enough swap the compile gets OOM-killed partway through, and the
+# failure ('cc1: killed') doesn't obviously say why.
+if [[ "$RECONFIGURE_ONLY" == "1" ]]; then
+  skip "--reconfigure: no build, swap irrelevant"
 else
-  info "swap is only ${swap_mb} MB -- raising to 1024 MB for the build"
-  if [[ -f /etc/dphys-swapfile ]]; then
+  swap_kb="$(awk '/^SwapTotal:/ {print $2}' /proc/meminfo)"
+  swap_mb=$(( swap_kb / 1024 ))
+  if (( swap_mb >= 512 )); then
+    skip "swap is ${swap_mb} MB, enough"
+  elif [[ -f /etc/dphys-swapfile ]]; then
+    info "swap is ${swap_mb} MB -- raising to 1024 MB for the build"
     run sed -i 's/^#\?CONF_SWAPSIZE=.*/CONF_SWAPSIZE=1024/' /etc/dphys-swapfile
     run sed -i 's/^#\?CONF_MAXSWAP=.*/CONF_MAXSWAP=2048/' /etc/dphys-swapfile
     run systemctl restart dphys-swapfile
     ok "swap raised to 1024 MB"
+  elif [[ -n "$(swapon --show=NAME --noheadings 2>/dev/null)" ]]; then
+    # Trixie images use zram rather than dphys-swapfile. Compressed swap in RAM
+    # is less headroom than a swapfile, but the shairport-sync build at -j2 has
+    # been observed to complete on ~400 MB of it.
+    info "swap is ${swap_mb} MB via $(swapon --show=NAME --noheadings | tr '\n' ' ')(no dphys-swapfile on this image)"
+    info "that has been enough for the -j2 build; watch for 'cc1: killed' if it isn't"
   else
-    warn "no dphys-swapfile; skipping. The build may OOM -- watch for 'cc1: killed'."
+    warn "no swap at all and no dphys-swapfile. The build may well OOM."
+    warn "If it dies with 'cc1: killed', add swap and re-run."
   fi
 fi
