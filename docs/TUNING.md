@@ -45,6 +45,92 @@ To calibrate:
 4. Turn the phone down. Bass should hold up rather than thinning out. Too much
    lift and it'll sound bloated; raise `reference_level` if so.
 
+## A/B testing the DSP
+
+### The quick way: bypass the pipeline step
+
+In the GUI's pipeline view, each step has a bypass toggle. Flip it while music
+plays — no restart, no gap. In the config it's `bypassed: true` on the step:
+
+```yaml
+pipeline:
+  - type: Filter
+    channels: [0, 1]
+    bypassed: true
+    names:
+      - loudness
+```
+
+**This is safe.** Worth stating explicitly, because it wouldn't necessarily be:
+if the Loudness filter carried the Main volume attenuation, bypassing it would
+jump the output to full scale into your amp. It doesn't — CamillaDSP applies
+Main volume independently of any filter. Measured, not assumed.
+
+### What you should hear
+
+Measured on this exact config (`low_boost: 10`, `high_boost: 4`,
+`reference_level: -20`), bypassed vs active:
+
+| Phone volume | 50 Hz | 1 kHz | 12 kHz |
+|---|---|---|---|
+| −20 dB (at reference) | +0.00 dB | +0.00 dB | +0.00 dB |
+| −35 dB | +5.86 dB | +0.02 dB | +2.99 dB |
+| −50 dB | +7.74 dB | +0.03 dB | +3.99 dB |
+
+Three things follow:
+
+- **At `reference_level` the curve is exactly flat.** A/B there and you should
+  hear *nothing at all*. If you do, `reference_level` isn't where you think.
+- **The midrange is untouched** (0.03 dB). So this is a fair comparison — you're
+  not just hearing one being louder, which is what ruins most EQ A/Bs.
+- **Full boost lands around 30 dB below reference.** Below that it stops
+  increasing.
+
+### Level-matching, once you add PEQ
+
+The fairness above is a property of the loudness filter, not of A/B testing in
+general. **Any PEQ you add will change the overall level, and louder always
+wins a blind comparison.** When you start adding corrective filters, add a
+`Gain` filter to match levels before judging:
+
+```yaml
+filters:
+  trim:
+    type: Gain
+    parameters:
+      gain: -3.0
+      inverted: false
+      mute: false
+```
+
+Put it last in the pipeline and set it so bypassed and active measure the same
+at 1 kHz. Only then is the comparison about tone rather than volume.
+
+### The deeper test: bypass the whole DSP chain
+
+The above A/Bs the *filters*. To test whether the loopback and CamillaDSP are
+themselves transparent, point shairport-sync straight at the DAC.
+
+> **Set your amp low first.** With `ignore_volume_control = "yes"` there is no
+> attenuation anywhere in this path — shairport-sync passes full scale and
+> CamillaDSP is no longer in circuit to apply volume. Your phone's slider will
+> do nothing. Change both settings together or don't do this at all.
+
+In `config/settings.env` set `IGNORE_VOLUME_CONTROL="no"`, then on the Pi edit
+`/etc/shairport-sync.conf` to point `output_device` at the DAC:
+
+```
+output_device = "hw:CARD=ZD3,DEV=0";
+```
+
+`sudo systemctl restart shairport-sync`. Volume now happens in shairport-sync
+instead, and CamillaDSP sits idle with nothing feeding its loopback.
+
+To go back: `sudo ./bootstrap.sh --reconfigure`, which restores both.
+
+This is a one-off sanity check, not a routine comparison — it's fiddly and the
+volume semantics change underneath you.
+
 ## Using the GUI
 
 ```
