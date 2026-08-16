@@ -1,0 +1,25 @@
+[Unit]
+Description=CamillaGUI web interface
+Documentation=https://www.camilladsp.com/docs/camillagui/
+After=network-online.target camilladsp.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=camilladsp
+Group=camilladsp
+WorkingDirectory=/opt/camillagui
+
+# Path is discovered at install time -- the bundle's entry point name has moved
+# between releases, so 60-camillagui.sh finds it rather than assuming.
+ExecStart=@GUI_BIN@
+
+Restart=on-failure
+RestartSec=5
+
+# The GUI is a convenience, not part of the audio path. Keep it out of the way
+# of CamillaDSP on a four-core board with 512 MB.
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

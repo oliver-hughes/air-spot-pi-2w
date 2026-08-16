@@ -1,0 +1,86 @@
+# ---------------------------------------------------------------------------
+# THIS IS YOUR FILE. Everything else in this repo is plumbing.
+#
+# Bootstrap concatenates this onto the rendered base.yml to produce the live
+# CamillaDSP config. Two ways to work:
+#
+#   * Edit here, `sudo ./bootstrap.sh --reconfigure`, done.
+#   * Tune live in the web GUI, then `make pull-config` to bring your changes
+#     back into this file so they survive a reflash. See docs/TUNING.md.
+# ---------------------------------------------------------------------------
+
+filters:
+
+  # --- Loudness compensation ------------------------------------------------
+  # Boosts lows and highs as you turn down, compensating for the ear's reduced
+  # sensitivity to frequency extremes at low levels (Fletcher-Munson).
+  #
+  # `fader: Main` is what makes this track the actual volume -- the AirPlay
+  # volume from your phone arrives here via vol-bridge.py.
+  #
+  # IMPORTANT: this only knows about CamillaDSP's digital volume. The ZD3's
+  # knob and your amp's knob are invisible to it. Set both once, leave them,
+  # and calibrate reference_level against that. See DESIGN.md 8.1.
+  loudness:
+    type: Loudness
+    parameters:
+      fader: Main
+
+      # The volume at which the curve is flat -- i.e. "my normal listening
+      # level". THE parameter that matters, and the one you must set by ear.
+      #
+      # Scale: vol-bridge maps the AirPlay slider onto 0 dB (full) to -60 dB
+      # (minimum). So -20 here is roughly two-thirds up the phone slider.
+      #
+      # To calibrate: set the phone where you normally listen, then adjust
+      # reference_level until the loudness filter is doing nothing at that
+      # position. Below it you get lift, above it you don't.
+      reference_level: -20.0
+
+      # Maximum lift, in dB, applied at full attenuation.
+      #
+      # Asymmetric on purpose. The equal-loudness contours are much steeper at
+      # the bottom than the top, and a large high_boost mostly makes quiet
+      # listening sound harsh rather than full. Start conservative and raise
+      # low_boost first if quiet listening sounds thin.
+      low_boost: 10.0
+      high_boost: 4.0
+
+      # Cut the mids instead of boosting the extremes. Preserves headroom, but
+      # changes perceived level as the curve engages. Leave off to start.
+      attenuate_mid: false
+
+  # --- Your parametric EQ ---------------------------------------------------
+  # Empty deliberately: no room measurements yet, so there is nothing honest to
+  # put here. Adding invented filters would be worse than none.
+  #
+  # When you're ready, add entries and list them in the pipeline below. Example:
+  #
+  #   room_null_60:
+  #     type: Biquad
+  #     parameters:
+  #       type: Peaking
+  #       freq: 60
+  #       gain: -4.0
+  #       q: 2.0
+  #
+  #   tilt:
+  #     type: Biquad
+  #     parameters:
+  #       type: Highshelf
+  #       freq: 4000
+  #       gain: -1.5
+  #       q: 0.7
+
+
+pipeline:
+  # Loudness runs on both channels. If you add PEQ filters above, add their
+  # names to this list -- order is signal-chain order.
+  #
+  # Put corrective PEQ BEFORE loudness: you want to fix the room first and
+  # then apply the level-dependent curve on top of a corrected response.
+  - type: Filter
+    description: "Loudness compensation"
+    channels: [0, 1]
+    names:
+      - loudness

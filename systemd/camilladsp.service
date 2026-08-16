@@ -1,0 +1,50 @@
+[Unit]
+Description=CamillaDSP audio processing engine
+Documentation=https://github.com/HEnquist/camilladsp
+After=sound.target
+Wants=sound.target
+
+# CamillaDSP exits when the capture device reaches end-of-stream, which here
+# means "shairport-sync stopped playing". That is NORMAL, not a failure, and it
+# happens every time you pause. Without this, systemd's default start limit
+# would give up after five stop/start cycles in ten seconds and leave the
+# streamer dead until someone SSHed in.
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=camilladsp
+Group=camilladsp
+SupplementaryGroups=audio
+
+# Creates and owns /var/lib/camilladsp for the statefile.
+StateDirectory=camilladsp
+
+# --statefile persists volume and mute across restarts. Essential here: the
+# service restarts on every pause, and without it the volume would jump back
+# to default each time you resumed. `volume_limit` in base.yml is the safety
+# net against a persisted level coming back too loud.
+#
+# --address 127.0.0.1 keeps the control socket local; only the GUI and
+# vol-bridge talk to it, and both run on this machine.
+ExecStart=/usr/local/bin/camilladsp \
+    --port 1234 \
+    --address 127.0.0.1 \
+    --statefile /var/lib/camilladsp/statefile.yml \
+    --loglevel info \
+    /etc/camilladsp/configs/active.yml
+
+Restart=always
+RestartSec=1
+
+# Real-time scheduling so the audio thread wins against USB interrupt
+# contention from the ethernet adapter sharing the bus (DESIGN.md 9.1).
+# FIFO priority 20 is modest -- high enough to beat normal work, low enough
+# not to starve the kernel's own RT threads. Raise it if pops persist.
+CPUSchedulingPolicy=fifo
+CPUSchedulingPriority=20
+LimitRTPRIO=95
+LimitMEMLOCK=infinity
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,66 @@
+# ---------------------------------------------------------------------------
+# CamillaDSP -- device and engine settings.
+#
+# GENERATED. Bootstrap renders this file and concatenates filters.yml onto the
+# end to produce /etc/camilladsp/configs/active.yml. Edit filters.yml for EQ;
+# edit this file only for engine/device behaviour.
+# ---------------------------------------------------------------------------
+
+title: "big"
+description: "AirPlay 2 -> loudness EQ -> Fosi ZD3"
+
+devices:
+  # Pinned to match shairport-sync's output_rate -- both come from OUTPUT_RATE
+  # in config/settings.env. The ALSA Loopback takes its rate from whichever
+  # application opens it first, so the two ends must agree explicitly.
+  #
+  # 48000, because AirPlay 2's lossless tier (ALAC/S24/48000) is 48k only.
+  # See config/settings.env and DESIGN.md 3.2.
+  samplerate: @SAMPLERATE@
+
+  # 2048 frames ~= 46 ms. Larger is more tolerant of the USB scheduling jitter
+  # we expect from sharing one USB 2.0 bus with the ethernet adapter
+  # (DESIGN.md 9.1), at the cost of latency we have in abundance -- AirPlay
+  # buffers around two seconds regardless. This is the first knob to turn if
+  # you hear intermittent pops.
+  chunksize: 2048
+  queuelimit: 8
+
+  # Corrects long-term clock drift between the loopback and the DAC.
+  #
+  # Worth understanding: because the capture device is an ALSA Loopback,
+  # CamillaDSP does this by tuning the loopback's virtual sample clock rather
+  # than by resampling. There is no resampler in this path and no CPU cost --
+  # which is exactly what we want on a Zero 2 W.
+  enable_rate_adjust: true
+  target_level: 8192
+  adjust_period: 10
+
+  # shairport-sync closing the loopback is an end-of-stream for us, and
+  # CamillaDSP exits once the pipeline drains. Pad the tail so the last moment
+  # of audio isn't clipped off. systemd restarts us -- see camilladsp.service.
+  extra_samples: 8192
+
+  stop_on_rate_change: false
+
+  volume_ramp_time: 400.0
+
+  # Hard ceiling on the Main fader. The statefile restores the last volume at
+  # startup, and CamillaDSP restarts every time playback stops -- without a
+  # limit, one accidental boost would come back at full tilt on every restart.
+  volume_limit: 0.0
+
+  capture:
+    type: Alsa
+    channels: 2
+    device: "hw:Loopback,1,0"
+    # Must match shairport-sync's output_format. Pinned rather than negotiated,
+    # for the same first-opener-wins reason as samplerate.
+    format: S32_LE
+
+  playback:
+    type: Alsa
+    channels: 2
+    # Card *name*, not index -- indices reshuffle across reboots and hotplug.
+    device: "@DAC_DEVICE@"
+    format: S32_LE

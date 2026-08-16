@@ -1,0 +1,16 @@
+[Unit]
+Description=Disable the Wi-Fi radio (air-spot: ethernet is the intended link)
+Documentation=https://github.com/oliverhughes/air-spot-pi-2w
+DefaultDependencies=no
+After=systemd-rfkill.service
+Before=network-pre.target avahi-daemon.service
+Wants=network-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/rfkill block wifi
+ExecStop=/usr/sbin/rfkill unblock wifi
+
+[Install]
+WantedBy=multi-user.target
