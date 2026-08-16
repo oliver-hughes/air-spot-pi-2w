@@ -10,6 +10,14 @@ phase "Tuning"
 # devices intermittently choosing the wrong route and blaming the Pi.
 if [[ "${KEEP_WIFI:-0}" == "1" ]]; then
   skip "--keep-wifi: leaving the radio up"
+elif ssh_session_is_on_wifi; then
+  # Re-checked here, not just in preflight: on a full run preflight was ~20
+  # minutes ago, and this is the line that actually severs the connection.
+  # Skip rather than die -- we're at the last phase, and everything that
+  # matters is already installed and running.
+  warn "an SSH session is live over Wi-Fi -- NOT disabling the radio."
+  warn "Disabling it would cut that connection. Reconnect over ethernet and"
+  warn "re-run 'sudo ./bootstrap.sh --reconfigure' to apply this step."
 elif [[ -d /sys/class/net/wlan0 ]]; then
   if rfkill list wifi 2>/dev/null | grep -q "Soft blocked: yes"; then
     skip "wifi radio already disabled"

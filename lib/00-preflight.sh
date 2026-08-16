@@ -43,9 +43,25 @@ if ip -br link show up 2>/dev/null | grep -qE '^(eth|enx|end)'; then
   ok "ethernet link is up"
 elif ip -br link show up 2>/dev/null | grep -q '^wlan'; then
   warn "no ethernet detected -- you appear to be connected over Wi-Fi."
-  warn "80-tuning.sh disables the Wi-Fi radio, which would drop this session."
-  warn "Either plug in ethernet, or re-run with --keep-wifi."
-  [[ "${KEEP_WIFI:-0}" == "1" ]] || die "refusing to cut your own connection. Use --keep-wifi to override."
+fi
+
+# The question that actually matters is not "does ethernet exist" but "is THIS
+# session on it". With both interfaces up, big.local can resolve to the Wi-Fi
+# address; blocking the radio would then cut us off mid-run, leaving a hung
+# terminal and a half-tuned box.
+if [[ "${KEEP_WIFI:-0}" != "1" ]] && ssh_session_is_on_wifi; then
+  die "your SSH session is coming in over Wi-Fi, not ethernet.
+
+The tuning phase disables the Wi-Fi radio, which would kill this connection
+partway through and leave the box half-configured.
+
+Fix it in one of these ways:
+
+  * Reconnect over the ethernet address, then re-run:
+$(ip -o -4 addr show 2>/dev/null | awk '$2 ~ /^(eth|enx|end)/ {split($4,a,"/"); print "        ssh " ENVIRON["SUDO_USER"] "@" a[1]}')
+
+  * Or keep the radio enabled:
+        sudo ./bootstrap.sh --keep-wifi"
 fi
 
 # --- The DAC ----------------------------------------------------------------

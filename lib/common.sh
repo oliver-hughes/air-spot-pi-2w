@@ -116,3 +116,36 @@ render() {
 }
 
 need_reboot() { REBOOT_REQUIRED=1; }
+
+# Is there a live SSH session arriving over the Wi-Fi interface?
+#
+# Checking merely that an ethernet interface is up is not enough: with both
+# interfaces up, `big.local` can resolve to the Wi-Fi address, and then
+# disabling the radio cuts the very session running this script. The symptom is
+# a terminal that hangs on a dead socket rather than any error message, which
+# is a miserable thing to debug.
+#
+# $SSH_CONNECTION would be the direct way to check, but sudo strips it from the
+# environment. So look for an established connection on port 22 whose local
+# address belongs to wlan0 -- that works regardless of how we were invoked.
+ssh_session_is_on_wifi() {
+  [[ -d /sys/class/net/wlan0 ]] || return 1
+  command -v ss >/dev/null 2>&1 || return 1
+
+  local ip established
+  established="$(ss -tn state established '( sport = :22 )' 2>/dev/null || true)"
+  [[ -n "$established" ]] || return 1
+
+  while read -r ip; do
+    [[ -n "$ip" ]] || continue
+    if grep -qF " ${ip}:22 " <<<" $established "; then
+      return 0
+    fi
+    # ss output columns vary slightly by version; fall back to a plain match.
+    if grep -qF "$ip" <<<"$established"; then
+      return 0
+    fi
+  done < <(ip -o -4 addr show wlan0 2>/dev/null | awk '{print $4}' | cut -d/ -f1)
+
+  return 1
+}
