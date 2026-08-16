@@ -6,7 +6,7 @@ Turn a fresh Raspberry Pi Zero 2 W into an **AirPlay 2** target with a
 Three steps:
 
 1. Flash Raspberry Pi OS Lite (64-bit) with Raspberry Pi Imager — [docs/IMAGER.md](docs/IMAGER.md)
-2. `ssh big@big.local`, clone this repo, `sudo ./bootstrap.sh`
+2. `ssh big@big.local`, `sudo apt install -y git`, clone this repo, `sudo ./bootstrap.sh`
 3. Play to **big** from any Apple device
 
 ```

@@ -40,10 +40,28 @@ rather than cutting the branch it's sitting on.
 ```bash
 ssh big@big.local
 
+# Pi OS Lite ships without git. bootstrap.sh installs it (it needs git to fetch
+# the nqptp and shairport-sync sources) but that's too late to clone this repo.
+sudo apt update && sudo apt install -y git
+
 git clone https://github.com/oliver-hughes/air-spot-pi-2w.git
 cd air-spot-pi-2w
 sudo ./bootstrap.sh
 ```
+
+### Or skip git entirely
+
+Once you're iterating on changes, syncing your working tree beats a
+commit/push/pull cycle per fix — and it needs nothing installed on the Pi:
+
+```bash
+# from your laptop, in the repo
+rsync -av --exclude .git ./ big@big.local:~/air-spot-pi-2w/
+```
+
+Note that `make push-config` assumes the git clone, since it does a `git pull`
+on the Pi. If you rsync'd, just rsync again and run
+`sudo ./bootstrap.sh --reconfigure`.
 
 Expect **15–25 minutes**, nearly all of it compiling shairport-sync. It goes
 quiet during the build; that's normal.
