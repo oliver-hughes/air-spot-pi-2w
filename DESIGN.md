@@ -290,19 +290,22 @@ real listening level. Mechanism:
 shairport-sync invokes it with the AirPlay volume, the script maps that to dB and sends
 `SetVolume` over CamillaDSP's websocket.
 
-**The unresolved part is avoiding double attenuation.** If shairport-sync also applies its
-own software attenuation before the loopback, we attenuate twice and the loudness curve is
-calibrated against the wrong level. Two candidate fixes:
+**RESOLVED on hardware (2026-08-16): option A works.**
 
-- **A:** `ignore_volume_control = "yes"` — shairport-sync sends full scale, CamillaDSP owns
-  all attenuation. Clean *if* the volume hook still fires in this mode. **Needs verifying on
-  hardware** — I'm not confident it does.
+The open question was whether `run_this_when_volume_is_set` still fires when
+`ignore_volume_control = "yes"`. It does. shairport-sync sends full scale, CamillaDSP owns all
+attenuation, the hook fires on every volume change, and there is no double attenuation. This
+is the clean arrangement and it's what ships.
+
+For the record, the fallback if it had *not* fired — kept because a future shairport-sync
+release could change this behaviour:
+
 - **B:** Let shairport-sync attenuate as normal, and drive the Loudness filter from an **Aux**
-  fader that shapes the curve without applying gain. Definitely fires, but needs checking
-  that an Aux fader tilts without also attenuating.
+  fader that shapes the curve without applying gain. Definitely fires, but needs checking that
+  an Aux fader tilts without also attenuating.
 
-I'll settle this by testing both on the actual Pi rather than guessing. It's a
-half-hour experiment, not a design risk — one of them will work.
+If volume ever stops tracking after an upgrade, `make volume-test` is the two-minute check and
+docs/TUNING.md has the switch-over.
 
 Mute, and the `-144 dB` AirPlay mute sentinel, need handling explicitly in the bridge.
 

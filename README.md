@@ -88,14 +88,24 @@ level, the point where the curve goes flat. It has to be set by ear;
 
 ## Status
 
-Specced and implemented; **not yet run on hardware.** Two things are expected to
-need attention on first contact:
+**Running on hardware.** AirPlay 2 target works, audio plays through the ZD3,
+and the volume bridge tracks the phone's slider.
 
-- **The volume bridge** — whether shairport-sync still fires its volume hook
-  under `ignore_volume_control = "yes"`. `make volume-test` settles it in two
-  minutes, and there's a documented fallback. See DESIGN.md §8.
+Resolved on first contact:
+
+- **The volume bridge works** with `ignore_volume_control = "yes"` — the hook
+  does still fire in that mode, so CamillaDSP owns all attenuation and there's
+  no double-attenuation. This was the design's main open question. DESIGN.md §8.
+
+Still outstanding:
+
 - **USB contention** — the ethernet adapter and the DAC share one USB 2.0 bus.
-  Likely fine, unproven. `make soak` is the test. See DESIGN.md §9.1.
+  No dropouts observed yet, but the long soak hasn't been run. `make soak`.
+  DESIGN.md §9.1.
+- **CamillaGUI** — crash-looping on first install; being diagnosed. Not in the
+  audio path, so it doesn't affect playback.
+- **Surround** — a sender choosing 5.1/7.1 has nowhere to go in a stereo
+  pipeline. Unverified. DESIGN.md §3.2.
 
 Acceptance criteria are listed in DESIGN.md §12.
 
