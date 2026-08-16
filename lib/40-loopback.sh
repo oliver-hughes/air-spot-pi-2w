@@ -44,9 +44,14 @@ if [[ "$DRY_RUN" != "1" ]]; then
   fi
 
   # If the module was already loaded with different options, our modprobe.conf
-  # won't take effect until reboot. Detect that rather than let it confuse us later.
-  if [[ -d /proc/asound/Loopback ]] && ! grep -q '^ *7 ' /proc/asound/cards; then
-    warn "loopback is loaded at a different index than configured -- reboot to apply"
-    need_reboot
+  # won't take effect until reboot. Check that card 7 is specifically the
+  # Loopback -- testing only that *something* sits at index 7 would pass even
+  # when the loopback landed somewhere else entirely.
+  if [[ -d /proc/asound/Loopback ]]; then
+    loop_idx="$(awk '/\[Loopback *\]/ { print $1; exit }' /proc/asound/cards)"
+    if [[ "$loop_idx" != "7" ]]; then
+      warn "loopback is at card index ${loop_idx:-unknown}, expected 7 -- reboot to apply"
+      need_reboot
+    fi
   fi
 fi

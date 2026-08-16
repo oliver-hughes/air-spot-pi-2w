@@ -3,14 +3,32 @@
 
 phase "shairport-sync ${SHAIRPORT_SYNC_VERSION}"
 
+# The build succeeds happily without AirPlay 2 if a dependency was missing, and
+# you'd only find out when the device turned up as classic AirPlay weeks later.
+# So check the binary, not the exit status.
+#
+# The version string looks like:
+#   5.2.1-AirPlay2-smi10-OpenSSL-Avahi-ALSA-soxr-sysconfdir:/etc
+# Note "AirPlay2" with no space -- matching "AirPlay 2" fails on a good build.
+has_airplay2() {
+  command -v shairport-sync >/dev/null 2>&1 &&
+    shairport-sync -V 2>&1 | grep -qiE 'airplay[ _-]?2'
+}
+
 if [[ "$RECONFIGURE_ONLY" == "1" ]]; then
   skip "--reconfigure: not rebuilding"
   return 0
 fi
 
-if stamp_matches shairport-sync "$SHAIRPORT_SYNC_VERSION" && command -v shairport-sync >/dev/null 2>&1; then
-  skip "already at ${SHAIRPORT_SYNC_VERSION}"
+# Verify on the skip path too, so a previously bad install gets rebuilt rather
+# than silently accepted forever on the strength of its stamp.
+if stamp_matches shairport-sync "$SHAIRPORT_SYNC_VERSION" && has_airplay2; then
+  skip "already at ${SHAIRPORT_SYNC_VERSION} with AirPlay 2"
   return 0
+fi
+
+if stamp_matches shairport-sync "$SHAIRPORT_SYNC_VERSION"; then
+  warn "stamped at ${SHAIRPORT_SYNC_VERSION} but the binary is missing or lacks AirPlay 2 -- rebuilding"
 fi
 
 src="$BUILD_DIR/shairport-sync"
@@ -47,19 +65,16 @@ info "compiling -- expect 10-15 minutes, and don't be alarmed by the silence"
 run_sh "cd '$src' && make -j2"
 run_sh "cd '$src' && make install"
 
-write_stamp shairport-sync "$SHAIRPORT_SYNC_VERSION"
-
-# Verify AirPlay 2 actually got compiled in. The build succeeds happily without
-# it if a dependency was missing, and you'd only discover it when the device
-# shows up as classic AirPlay weeks later.
+# Verify BEFORE stamping, so a bad build isn't recorded as a good one.
 if [[ "$DRY_RUN" != "1" ]]; then
-  if shairport-sync -V 2>&1 | grep -q 'AirPlay 2'; then
-    ok "AirPlay 2 support confirmed in the binary"
+  if has_airplay2; then
+    ok "AirPlay 2 confirmed: $(shairport-sync -V 2>&1)"
   else
     die "shairport-sync built, but WITHOUT AirPlay 2 support.
-Version string: $(shairport-sync -V 2>&1)
+Version string: $(shairport-sync -V 2>&1 || echo '(binary not found)')
 A dependency was probably missing. Check the configure output above."
   fi
 fi
 
+write_stamp shairport-sync "$SHAIRPORT_SYNC_VERSION"
 ok "shairport-sync ${SHAIRPORT_SYNC_VERSION} installed"
