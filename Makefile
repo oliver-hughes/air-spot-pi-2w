@@ -1,5 +1,6 @@
 # Helpers you run from your laptop, against the Pi.
 #
+#   make check          validate the CamillaDSP config before deploying
 #   make pull-config    bring GUI tuning back into git
 #   make push-config    apply repo tuning to the Pi
 #   make logs           follow everything relevant
@@ -13,10 +14,15 @@ SSH     := ssh $(PI_USER)@$(PI)
 REPO_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
 FILTERS   := $(REPO_ROOT)/config/camilladsp/filters.yml
 
-.PHONY: help pull-config push-config logs volume-test status restart soak
+.PHONY: help check pull-config push-config logs volume-test status restart soak
 
 help:
 	@sed -n 's/^#   //p' $(MAKEFILE_LIST) | head -20
+
+## Validate the CamillaDSP config locally, before rsyncing to the Pi.
+## Downloads a host build of camilladsp (cached) and runs its own --check.
+check:
+	@./tools/check-config.sh
 
 ## Pull the live filters + pipeline off the Pi into the repo.
 ## Run this after tuning in the web GUI, or your work lives only on the SD card.

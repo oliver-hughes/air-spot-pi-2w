@@ -74,10 +74,20 @@ reserialises the whole config when it saves. If your annotations vanish from
 
 ```bash
 vim config/camilladsp/filters.yml
+make check                            # validate locally first -- seconds
 sudo ./bootstrap.sh --reconfigure     # on the Pi
 # or, from the laptop:
 make push-config
 ```
+
+`make check` downloads a host build of CamillaDSP (cached, pinned to the same
+version bootstrap installs) and runs its own `--check` on the generated config.
+It catches bad fields, wrong filter parameters and pipeline syntax errors
+without a deploy round trip.
+
+On macOS it swaps the ALSA backends for file-based ones first, because the
+macOS build has no ALSA support. Everything version-sensitive is still
+validated; the ALSA device strings are not, and are resolved on the Pi.
 
 `--reconfigure` skips all source builds — it's seconds, not minutes.
 

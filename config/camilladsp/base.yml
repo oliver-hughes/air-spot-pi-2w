@@ -37,10 +37,12 @@ devices:
   adjust_period: 10
 
   # shairport-sync closing the loopback is an end-of-stream for us, and
-  # CamillaDSP exits once the pipeline drains. Pad the tail so the last moment
-  # of audio isn't clipped off. systemd restarts us -- see camilladsp.service.
-  extra_samples: 8192
-
+  # CamillaDSP exits once the pipeline drains. systemd restarts it -- see
+  # camilladsp.service, which sets StartLimitIntervalSec=0 because that cycle
+  # is normal here rather than a failure.
+  #
+  # (An earlier revision set `extra_samples` here to pad the tail. That field
+  # only applies to File/Stdin capture, not Alsa, and 4.x rejects it outright.)
   stop_on_rate_change: false
 
   volume_ramp_time: 400.0
